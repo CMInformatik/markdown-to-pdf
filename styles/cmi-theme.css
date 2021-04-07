@@ -1,0 +1,111 @@
+/* Optimierungen, wenn das HTML gedruckt wird. */
+/* Achtung: Der HTML zu PDF Converter (Aspose) ignoriert @page und @media weitestgehend. */
+html {
+    -webkit-print-color-adjust: exact;
+}
+
+@media print {
+    /* Links im Druck ausschreiben */
+    a[href]::after {
+        content: " <"attr(href)">";
+        color: #3d3d3d;
+    }
+}
+
+body, p, label, figure {
+    font-family: "Helvetica Roman", Helvetica, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 13pt;
+    color: #707173;
+    margin:0pt;
+    margin-bottom: 13pt;
+}
+
+p {
+    page-break-inside:avoid;
+    widows:5;
+    orphans:2;
+}
+
+blockquote, pre {
+    margin-top:0pt;
+}
+
+a {
+    color: #3d3d3d;
+}
+
+h1 {
+    font-size: 29pt;
+    line-height: 30pt;
+    font-weight: normal;
+    color: #00a0e6;
+    margin:0pt;
+    margin-bottom: 28pt;
+    page-break-before:always;
+}
+
+h2 {
+    page-break-before:always;
+    font-size: 19pt;
+    line-height: 22pt;
+    font-weight: normal;
+    color: #00a0e6;
+    margin:0pt;
+    margin-bottom: 36pt;
+}
+
+h3 {
+    page-break-after:avoid;
+    font-size: 13pt;
+    line-height: 18pt;
+    margin:0pt;
+    margin-bottom: 13pt;
+    font-weight: bold;
+}
+
+h4 {
+    page-break-after:avoid;
+}
+
+ul {
+    list-style: square;
+    margin:0pt;
+    margin-bottom: 13pt;
+}
+
+ul li {
+    page-break-after: avoid;
+}
+
+table {
+    border-collapse: collapse;
+    text-align:left;
+    margin-bottom:26pt;
+    width:100%;
+}
+
+th {
+    border-top: 1px solid #00a0e6;
+    border-bottom: 1px solid #00a0e6;
+    background-color: #e1eef9;
+    font-weight: bold;
+    font-size: 9pt;
+    height: 9.5pt;
+}
+
+tr {
+    border-top: 1px solid #00a0e6;
+    border-bottom: 1px solid #00a0e6;
+    font-size: 9pt;
+    height: 9.5pt;
+}
+
+td {
+    margin-right: 8pt;
+}
+
+.sourceCode {
+    page-break-inside: avoid;
+    font-family: "Courier New", Courier, monospace;
+}

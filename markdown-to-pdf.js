@@ -25,7 +25,7 @@ const output_dir = (process.env.INPUT_OUTPUT_DIR == undefined || process.env.INP
 const build_html = (process.env.INPUT_BUILD_HTML == undefined || process.env.INPUT_BUILD_HTML == "") ? true : process.env.INPUT_BUILD_HTML === "true";
 
 // Custom CSS and HTML files for theming
-const ThemeFile = (process.env.INPUT_THEME == undefined || process.env.INPUT_THEME == "") ? "/styles/markdown.css" : '/github/workspace/' + process.env.INPUT_THEME;
+const ThemeFile = (process.env.INPUT_THEME == undefined || process.env.INPUT_THEME == "") ? "/styles/cmi-theme.css" : '/github/workspace/' + process.env.INPUT_THEME;
 const HighlightThemeFile = (process.env.INPUT_HIGHLIGHT_THEME == undefined || process.env.INPUT_HIGHLIGHT_THEME == "") ? "/styles/highlight.css" : '/github/workspace/' + process.env.INPUT_HIGHLIGHT_THEME;
 const TemplateFile = (process.env.INPUT_TEMPLATE == undefined || process.env.INPUT_TEMPLATE == "") ? "/template/template.html" : '/github/workspace/' + process.env.INPUT_TEMPLATE;
 
