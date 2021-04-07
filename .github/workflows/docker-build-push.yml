@@ -11,4 +11,3 @@ jobs:
         with:
           push: true
           tags: markdown-to-pdf:latest
-          github-token: ${{ secrets.GITHUB_TOKEN }}
