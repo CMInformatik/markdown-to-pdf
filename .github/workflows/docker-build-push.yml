@@ -7,7 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: docker/build-push-action@v2.4.0
+      - name: Build container image
+      - uses: docker/build-push-action@v1
         with:
-          push: true
-          tags: markdown-to-pdf:latest
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          registry: docker.pkg.github.com
+          repository: ${{ github.repository }}/markdown-to-pdf
+          tag_with_sha: true
+          tag_with_ref: true
