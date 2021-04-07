@@ -138,13 +138,17 @@ function BuildHTML(html, file) {
 
 // BuildPDF outputs the PDF file after building it via a chromium package
 function BuildPDF(data, file) {
+	// Load header
+	const header = fs.readFileSync('./template/header.html').toString('utf-8');
+
+	// Set up
 	let PDFLayout = {
 		path: OutputDir + UpdateFileName(file, "pdf"),
 		format: 'A4',
-		scale: .9,
-		margin: { top: 50, bottom: 50, right: '50', left: '50' },
-		headerTemplate: css+'<h1>'+'My PDF Report Header'+'</h1>',
-		footerTemplate: css+'<h1>Page <span class="pageNumber"></span> of <span class="totalPages"></span></h1>',
+		scale: 1,
+		margin: {top: '37.5mm', bottom: '18mm', right: '23.5mm', left: '23.5mm'},
+		headerTemplate: header,
+		footerTemplate: '<h1>Page <span class="pageNumber"></span> of <span class="totalPages"></span></h1>',
 		displayHeaderFooter: true
 	};
 
