@@ -95,7 +95,11 @@ td {
     margin-right: 8pt;
 }
 
-.sourceCode {
+pre {
+    background-color: #f6f4f4;
+}
+
+code {
     page-break-inside: avoid;
     font-family: "Courier New", Courier, monospace;
 }
