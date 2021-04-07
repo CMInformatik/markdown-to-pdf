@@ -7,11 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: docker/build-push-action@v1.1.0
+      - uses: docker/login-action@v1.8.0
         with:
           registry: docker.pkg.github.com/cminformatik/markdown-to-pdf
-          repository: markdown-to-pdf
-          tag_with_ref: true
-          always_pull: true
-          add_git_labels: true
-          path: .
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: true
+      - uses: docker/build-push-action@v2.4.0
+        with:
+          push: true
+          tags: markdown-to-pdf:latest
