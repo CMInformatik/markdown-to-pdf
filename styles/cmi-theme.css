@@ -1,15 +1,5 @@
-/* Optimierungen, wenn das HTML gedruckt wird. */
-/* Achtung: Der HTML zu PDF Converter (Aspose) ignoriert @page und @media weitestgehend. */
 html {
     -webkit-print-color-adjust: exact;
-}
-
-@media print {
-    /* Links im Druck ausschreiben */
-    a[href]::after {
-        content: " <"attr(href)">";
-        color: #3d3d3d;
-    }
 }
 
 body, p, label, figure {
