@@ -142,8 +142,10 @@ function BuildPDF(data, file) {
 		path: OutputDir + UpdateFileName(file, "pdf"),
 		format: 'A4',
 		scale: .9,
-		displayHeaderFooter: false,
-		margin: { top: 50, bottom: 50, right: '50', left: '50' }
+		margin: { top: 50, bottom: 50, right: '50', left: '50' },
+		headerTemplate: css+'<h1>'+'My PDF Report Header'+'</h1>',
+		footerTemplate: css+'<h1>Page <span class="pageNumber"></span> of <span class="totalPages"></span></h1>',
+		displayHeaderFooter: true
 	};
 
 	// Async function as this is event/time sensitive
