@@ -139,7 +139,7 @@ function BuildHTML(html, file) {
 // BuildPDF outputs the PDF file after building it via a chromium package
 function BuildPDF(data, file) {
 	// Load header
-	const header = fs.readFileSync('./template/header.html').toString('utf-8');
+	const header = fs.readFileSync('/template/header.html').toString('utf-8');
 
 	// Set up
 	let PDFLayout = {
