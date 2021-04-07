@@ -214,8 +214,6 @@ function CreateOutputDirectory(dirname) {
 
 // Start is a wrapper function to call the readdir folder
 async function Start() {
-	console.log('test');
-
 	await fs.readdir(InputDir, async function (err, files) {
 		// Check output folder exists and fetch file array
 		await CreateOutputDirectory(OutputDir);
