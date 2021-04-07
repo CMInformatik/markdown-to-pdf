@@ -12,6 +12,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           registry: docker.pkg.github.com
-          repository: docker.pkg.github.com/CMInformatik/markdown-to-pdf/markdown-to-pdf
+          repository: docker.pkg.github.com/cminformatik/markdown-to-pdf/markdown-to-pdf
           tag_with_sha: true
           tag_with_ref: true
