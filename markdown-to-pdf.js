@@ -10,6 +10,8 @@ const mustache = require('mustache');
 const puppeteer = require('puppeteer');
 const markdownIt = require('markdown-it');
 const { response } = require('express');
+const moment = require('moment');
+
 // Encoding is "null" so we can get the image correctly
 const request = require('request').defaults({ encoding: null });
 
@@ -139,7 +141,10 @@ function BuildHTML(html, file) {
 // BuildPDF outputs the PDF file after building it via a chromium package
 function BuildPDF(data, file) {
 	// Load header
-	const header = fs.readFileSync('/template/header.html').toString('utf-8');
+	let header = fs.readFileSync('/template/header.html').toString('utf-8');
+	header = header.replace('{{date}}',  moment().format('DD.MM.YYYY'));
+
+	const footer = fs.readFileSync('/template/footer.html').toString('utf-8');
 
 	// Set up
 	let PDFLayout = {
@@ -148,7 +153,7 @@ function BuildPDF(data, file) {
 		scale: 1,
 		margin: {top: '37.5mm', bottom: '18mm', right: '23.5mm', left: '23.5mm'},
 		headerTemplate: header,
-		footerTemplate: '<h1>Page <span class="pageNumber"></span> of <span class="totalPages"></span></h1>',
+		footerTemplate: footer,
 		displayHeaderFooter: true
 	};
 
