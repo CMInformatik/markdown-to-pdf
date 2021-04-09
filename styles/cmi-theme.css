@@ -6,7 +6,7 @@ body, p, label, figure {
     font-family: Arial, sans-serif;
     font-size: 10pt;
     line-height: 13pt;
-    color: #707173;
+    color: #6e6e6e;
     margin:0pt;
     margin-bottom: 13pt;
 }
@@ -29,7 +29,7 @@ h1 {
     font-size: 29pt;
     line-height: 30pt;
     font-weight: normal;
-    color: #00a0e6;
+    color: #009fe3;
     margin:0pt;
     margin-bottom: 28pt;
     page-break-before:always;
@@ -40,9 +40,9 @@ h2 {
     font-size: 19pt;
     line-height: 22pt;
     font-weight: normal;
-    color: #00a0e6;
+    color: #009fe3;
     margin:0pt;
-    margin-bottom: 36pt;
+    margin-bottom: 25pt;
 }
 
 h3 {
@@ -50,7 +50,7 @@ h3 {
     font-size: 13pt;
     line-height: 18pt;
     margin:0pt;
-    margin-bottom: 13pt;
+    margin-bottom: 15pt;
     font-weight: bold;
 }
 
@@ -76,17 +76,17 @@ table {
 }
 
 th {
-    border-top: 1px solid #00a0e6;
-    border-bottom: 1px solid #00a0e6;
-    background-color: #e1eef9;
+    border-top: 1px solid #009fe3;
+    border-bottom: 1px solid #009fe3;
+    background-color: #e3e3e3;
     font-weight: bold;
     font-size: 9pt;
     height: 9.5pt;
 }
 
 tr {
-    border-top: 1px solid #00a0e6;
-    border-bottom: 1px solid #00a0e6;
+    border-top: 1px solid #009fe3;
+    border-bottom: 1px solid #009fe3;
     font-size: 9pt;
     height: 9.5pt;
 }
@@ -96,7 +96,8 @@ td {
 }
 
 pre {
-    background-color: #f6f4f4;
+    background-color: #e3e3e3;
+    padding:10pt;
 }
 
 code {
