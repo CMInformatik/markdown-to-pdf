@@ -3,291 +3,252 @@
 
 // Import everything we need
 const fs = require('fs');
-const path = require('path');
 const hljs = require('highlight.js');
 const express = require('express');
 const mustache = require('mustache');
 const puppeteer = require('puppeteer');
+const cheerio = require('cheerio');
+const request = require('request').defaults({encoding: null}); // Encoding is "null" so we can get the image correctly
 const MarkdownIt = require('markdown-it');
 const MarkdownItAnchor = require('markdown-it-anchor');
 const markdownItTOC = require('markdown-it-toc-done-right');
 const moment = require('moment');
 
-// Encoding is "null" so we can get the image correctly
-const request = require('request').defaults({ encoding: null });
 
-// GitHub Action inputs that are for this program to run
-const images_dir = (process.env.INPUT_IMAGES_DIR == undefined || process.env.INPUT_IMAGES_DIR == "") ? "" : process.env.INPUT_IMAGES_DIR;
-const input_dir = (process.env.INPUT_INPUT_DIR == undefined || process.env.INPUT_INPUT_DIR == "") ? "" : process.env.INPUT_INPUT_DIR;
-const image_import = (process.env.INPUT_IMAGE_IMPORT == undefined || process.env.INPUT_IMAGE_IMPORT == "") ? null : process.env.INPUT_IMAGE_IMPORT;
+function nullCoalescing(value, fallback) {
+    return value !== undefined && value !== null ? value : fallback;
+}
 
-// Optional input, though recommended
-const output_dir = (process.env.INPUT_OUTPUT_DIR == undefined || process.env.INPUT_OUTPUT_DIR == "") ? "built" : process.env.INPUT_OUTPUT_DIR;
-
-// Whether to also output a <filename>.html file, there is a bit of magic at the end to ensure that the value is a boolean
-const build_html = (process.env.INPUT_BUILD_HTML == undefined || process.env.INPUT_BUILD_HTML == "") ? true : process.env.INPUT_BUILD_HTML === "true";
-
-// Custom CSS and HTML files for theming
-const ThemeFile = (process.env.INPUT_THEME == undefined || process.env.INPUT_THEME == "") ? "/styles/cmi-theme.css" : '/github/workspace/' + process.env.INPUT_THEME;
-const HighlightThemeFile = (process.env.INPUT_HIGHLIGHT_THEME == undefined || process.env.INPUT_HIGHLIGHT_THEME == "") ? "/styles/highlight.css" : '/github/workspace/' + process.env.INPUT_HIGHLIGHT_THEME;
-const TemplateFile = (process.env.INPUT_TEMPLATE == undefined || process.env.INPUT_TEMPLATE == "") ? "/template/template.html" : '/github/workspace/' + process.env.INPUT_TEMPLATE;
-
-// Assign express instance for image server
-const app = express();
-
-// Append Docker workspace structure to directories
-const InputDir = '/github/workspace/' + input_dir + "/";
-const OutputDir = '/github/workspace/' + output_dir + "/";
-const ImageDir = '/github/workspace/' + images_dir + "/";
-const ImageImport = image_import;
-
-// Assign the style and template files to strings for later manipulation
-const style =
-	fs.readFileSync(ThemeFile).toString('utf-8')
-	+ fs.readFileSync(HighlightThemeFile).toString('utf-8');
-const template = fs.readFileSync(TemplateFile).toString('utf-8');
-
-// Start image server so we can encode images correctly
-app.use(express.static(ImageDir))
-let server = app.listen(3000);
-
-// GetMarkdownFiles returns an array of only files ending in .md or .markdown
-// NOTE: When a file name is the same, eg. happy.md and happy.markdown, only one file is
-// outputted as it will be overwritten. This needs to be checked. (TODO:)
-function GetMarkdownFiles(files) {
-	return files.filter(function (filePath) {
-		if (path.extname(filePath).match(/^(.md|.markdown)$/)) {
-			return true;
-		}
-	})
+function getFileContent(file, encoding = 'utf-8') {
+    return fs.readFileSync(file).toString(encoding);
 }
 
 // GetMarkdownIt returns the instance of markdown-it with the correct settings
 function GetMarkdownIt() {
-	let md = new MarkdownIt({
-		html: true,
-		breaks: true,
-		xhtmlOut: true,
-		// Handle code snippet highlighting, we can catch this error as it will
-		// be correctly handled by markdown-it
-		highlight: function(str, lang) {
-			if(lang && hljs.getLanguage(lang)) {
-				try {
-					return hljs.highlight(str, {language: lang}).value;
-				}catch(__) {
-				}
-			}
+    let md = new MarkdownIt({
+        html: true,
+        breaks: true,
+        xhtmlOut: true,
+        // Handle code snippet highlighting, we can catch this error as it will
+        // be correctly handled by markdown-it
+        highlight: function(str, lang) {
+            if(lang && hljs.getLanguage(lang)) {
+                try {
+                    return hljs.highlight(str, {language: lang}).value;
+                }catch(__) {
+                }
+            }
 
-			return ''; // use external default escaping
-		}
-	});
+            return ''; // use external default escaping
+        }
+    });
 
-	md.use(MarkdownItAnchor, {
-		permalink: MarkdownItAnchor.permalink.ariaHidden({
-			class: 'anchor',
-			symbol: '<span class="octicon octicon-link"></span>',
-			placement: 'before',
-		}),
-		slugify: slugify,
-	});
-	md.use(markdownItTOC, {
-		containerId: 'table-of-contents',
-		listType: 'ul',
-		slugify: slugify,
-	});
+    md.use(MarkdownItAnchor, {
+        permalink: MarkdownItAnchor.permalink.ariaHidden({
+            class: 'anchor',
+            symbol: '<span class="octicon octicon-link"></span>',
+            placement: 'before',
+        }),
+        slugify: slugify,
+    });
+    md.use(markdownItTOC, {
+        containerId: 'table-of-contents',
+        listType: 'ul',
+        slugify: slugify,
+    });
 
-	return md;
+    return md;
+}
+
+// encodeImage is a helper function to fetch a URL and return the image as a base64 string
+async function encodeImage(url) {
+    return new Promise((resolve, reject) => {
+        request.get(url, function(error, response, body) {
+            if(error) {
+                console.log(error);
+
+                return resolve(null);
+            }
+
+            if(response.statusCode !== 200) {
+                console.log('Image not found, is the image folder route correct? [' + url + ']');
+
+                return resolve(null);
+            }
+
+            let data = 'data:' + response.headers['content-type'].replace(' ', '') + ';base64,' + new Buffer.from(body).toString('base64');
+
+            return resolve(data);
+        });
+    });
 }
 
 const used_headers = {};
 
 // 'slugify' is a helper function to escape characters in the titles URL
 function slugify(string) {
-	let slug = encodeURIComponent(string.trim()
-		.toLowerCase()
-		.replace(/[\]\[!"#$%&'()*+,.\/:;<=>?@\\^_{|}~`]/g, '')
-		.replace(/\s+/g, '-')
-		.replace(/^-+/, '')
-		.replace(/-+$/, ''));
+    let slug = encodeURIComponent(string.trim()
+        .toLowerCase()
+        .replace(/[\]\[!"#$%&'()*+,.\/:;<=>?@\\^_{|}~`]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/^-+/, '')
+        .replace(/-+$/, ''));
 
-	if(used_headers[slug]) {
-		slug += '-' + ++used_headers[slug];
-	}else {
-		used_headers[slug] = 0;
-	}
+    if(used_headers[slug]) {
+        slug += '-' + ++used_headers[slug];
+    }else {
+        used_headers[slug] = 0;
+    }
 
-	return slug;
+    return slug;
 }
 
-// UpdateFileName is a helper function to replace the extension
-function UpdateFileName(fileName, extension) {
-	var fileName = fileName.split('.');
-	fileName.pop();
-	(extension == null) ? "" : fileName.push(extension);
-	return fileName.join(".");
+class MarkdownToPDF {
+
+    constructor(options) {
+        this._image_import = options.image_import;
+        this._image_dir = nullCoalescing(options.image_dir, this._image_import);
+
+        this._style = options.style;
+        this._template = options.template;
+
+        this._table_of_contents = options.table_of_contents;
+    }
+
+    start() {
+        this._image_server_app = express();
+        this._image_server_app.use(express.static(this._image_dir));
+        this._image_server = this._image_server_app.listen(3000);
+
+        console.log("Started image server with image folder route '" + this._image_dir + "'.");
+        console.log();
+    }
+
+    async convert(data, title) {
+        if(typeof data !== 'string') throw "Parameter 'data' has to be a string containing Markdown content";
+        if(typeof title !== 'string' && title !== undefined) throw "Parameter 'title' has to be a string";
+
+        // Convert MD to HTML
+        let preHTML = this._convertToHtml(data, nullCoalescing(title, ''));
+        let html = await this._convertImageRoutes(preHTML);
+
+        // Build the PDF file
+        const browser = await puppeteer.launch({
+            args: [
+                '--headless',
+                '--no-sandbox',
+                '--disable-setuid-sandbox'
+            ]
+        });
+
+        const page = await browser.newPage();
+        await page.goto('data:text/html;,<h1>Not Rendered</h1>', {waitUntil: 'domcontentloaded', timeout: 2000});
+        await page.setContent(html);
+
+        // Load Header and footer
+        let header = fs.readFileSync('/template/header.html').toString('utf-8');
+        header = header.replace('{{date}}', moment().format('DD.MM.YYYY'));
+
+        const footer = fs.readFileSync('/template/footer.html').toString('utf-8');
+
+        const PDFLayout = {
+            format: 'A4',
+            scale: 1,
+            margin: {top: '37.5mm', bottom: '18mm', right: '23.5mm', left: '23.5mm'},
+            headerTemplate: header,
+            footerTemplate: footer,
+            displayHeaderFooter: true
+        };
+
+        let pdf = await page.pdf(PDFLayout);
+
+        await browser.close();
+
+        return new Result(html, pdf);
+    }
+
+    close() {
+        // Shutdown the image server
+        this._image_server.close(function() {
+            console.log();
+            console.log('Gracefully shut down image server.');
+        });
+    }
+
+    // This converts the markdown string to it's HTML values # => h1 etc.
+    _convertToHtml(text, title) {
+        if(this._table_of_contents) text = '[toc]\n' + text;
+
+        let md = GetMarkdownIt();
+        let body = md.render(text);
+        let doc = cheerio.load(body);
+        let toc = doc('nav#table-of-contents').html();
+
+        doc('nav#table-of-contents').remove();
+        body = doc('body').html();
+
+        let view = {
+            title: title,
+            style: this._style,
+            toc: toc,
+            content: body,
+        };
+
+        // Compile the template
+        return mustache.render(this._template, view);
+    }
+
+    // ConvertImageRoutes this function changed all instances of the ImageImport path to localhost,
+    // it then fetches this URL and encodes it to base64 so we can include it in both the HTML and
+    // PDF files without having to lug around an images folder
+    async _convertImageRoutes(html) {
+        if(this._image_import === null) {
+            return html;
+        }
+
+        let imagePath = this._image_import.replace(/[-\[\]{}()*+?.,\\^$|#]/g, '\\$&');
+        let imagePathRegex = new RegExp(imagePath, 'g');
+        let imgTagRegex = /<img[^>]+src="([^">]+)"/g;
+        let encoded = html;
+
+        let m;
+        while(m = imgTagRegex.exec(html)) {
+            try {
+                let path = m[1].replace(imagePathRegex, 'http://localhost:3000');
+                let image = await encodeImage(path);
+
+                if(image !== null) {
+                    encoded = encoded.replace(m[1], image);
+                }
+            }catch(error) {
+                console.log('ERROR:', error);
+            }
+        }
+
+        return encoded;
+    }
+
+
+    static nullCoalescing = nullCoalescing;
+    static getFileContent = getFileContent;
 }
 
-// GetFileBody retrieves the file content as a string
-function GetFileBody(file) {
-	return fs.readFileSync(InputDir + file).toString('utf-8');
+class Result {
+    html;
+    pdf;
+
+    constructor(html, pdf) {
+        this.html = html;
+        this.pdf = pdf;
+    }
+
+    writeHTML(file) {
+        fs.writeFileSync(file, this.html);
+    }
+
+    writePDF(file) {
+        fs.writeFileSync(file, this.pdf)
+    }
 }
 
-// ConvertImageRoutes this function changed all instances of the ImageImport path to localhost,
-// it then fetches this URL and encodes it to base64 so we can include it in both the HTML and
-// PDF files without having to lug around an images folder
-async function ConvertImageRoutes(html) {
-	if (ImageImport === null) { return html; }
-	let imagePath = ImageImport.replace(/[-[\]{}()*+?.,\\^$|#\\]/g, '\\$&');
-	let newPaths = html.replace(new RegExp(imagePath, "g"), "http://localhost:3000")
-	let rex = /<img[^>]+src="([^">]+)"/g;
-	let m
-	let encoded
-	while (m = rex.exec(newPaths)) {
-		try {
-			let image = await encodeImage(m[1]);
-			newPaths = newPaths.replace(new RegExp(m[1], "g"), image);
-		} catch (error) {
-			console.log('ERROR:', error);
-		}
-		encoded = newPaths
-	}
-	return encoded;
-}
-
-// This converts the markdown string to it's HTML values # => h1 etc.
-function ConvertToHtml(text) {
-	let md = GetMarkdownIt();
-	let body = md.render(text);
-	let view = {
-		style: style,
-		content: body
-	};
-	// Compile the template
-	return mustache.render(template, view);
-}
-
-// BuildHTML outputs the HTML string to a file
-function BuildHTML(html, file) {
-	fs.writeFileSync(OutputDir + UpdateFileName(file, "html"), html)
-	console.log("Built HTML file: " + UpdateFileName(file, "html"));
-}
-
-// BuildPDF outputs the PDF file after building it via a chromium package
-function BuildPDF(data, file) {
-	// Load header
-	let header = fs.readFileSync('/template/header.html').toString('utf-8');
-	header = header.replace('{{date}}',  moment().format('DD.MM.YYYY'));
-
-	const footer = fs.readFileSync('/template/footer.html').toString('utf-8');
-
-	// Set up
-	let PDFLayout = {
-		path: OutputDir + UpdateFileName(file, "pdf"),
-		format: 'A4',
-		scale: 1,
-		margin: {top: '37.5mm', bottom: '18mm', right: '23.5mm', left: '23.5mm'},
-		headerTemplate: header,
-		footerTemplate: footer,
-		displayHeaderFooter: true
-	};
-
-	// Async function as this is event/time sensitive
-	(async () => {
-		const browser = await puppeteer.launch({
-			args: [
-				'--headless',
-				'--no-sandbox',
-				'--disable-setuid-sandbox'
-			]
-		})
-		const page = await browser.newPage();
-		await page.goto(`data:text/html;,${encodeURIComponent(data)}`, { waitUntil: 'networkidle0' });
-		await page.pdf(PDFLayout);
-		await browser.close();
-	})();
-
-	console.log("Built PDF file: " + UpdateFileName(file, "pdf"));
-}
-
-// encodeImage is a helper function to fetch a URL and return the image as a base64 string
-async function encodeImage(url) {
-	return new Promise((resolve, reject) => {
-		request.get(url, function (error, response, body) {
-			if (error) {
-				console.log(error);
-				return resolve(null);
-			}
-			if (response.statusCode != 200) {
-				console.log("Images not found, is the image folder route correct?");
-				return resolve(null);
-			}
-			let data = "data:" + response.headers["content-type"].replace(" ", "") + ";base64," + new Buffer.from(body).toString('base64');
-			return resolve(data);
-		})
-	});
-}
-
-// Slug is a helper function to escape characters in the titles URL
-function Slug(string, used_headers) {
-	let slug = encodeURI(string.trim()
-		.toLowerCase()
-		.replace(/[\]\[\!\"\#\$\%\&\'\(\)\*\+\,\.\/\:\;\<\=\>\?\@\\\^\_\{\|\}\~\`]/g, '')
-		.replace(/\s+/g, '-')
-		.replace(/^\-+/, '')
-		.replace(/\-+$/, ''));
-	if (used_headers[slug]) {
-		used_headers[slug]++;
-		slug += '-' + used_headers[slug];
-	} else {
-		used_headers[slug] = 0;
-	}
-	return slug;
-}
-
-// CreateOutputDirectory creates the output directory if it doesn't exist
-function CreateOutputDirectory(dirname) {
-	if (!fs.existsSync(dirname)) {
-		fs.mkdirSync(dirname);
-	}
-}
-
-// Start is a wrapper function to call the readdir folder
-async function Start() {
-	await fs.readdir(InputDir, async function (err, files) {
-		// Check output folder exists and fetch file array
-		await CreateOutputDirectory(OutputDir);
-		files = await GetMarkdownFiles(files);
-
-		if (files.length == 0) {
-			console.log('No markdown files found. Exiting.');
-			return process.exit(0);
-		} else {
-			console.log('Markdown files found: ' + files.join(', '));
-		}
-
-		// Loop through each file converting it
-		for (let file of files) {
-
-			// Get the HTML from the MD file
-			let text = await GetFileBody(file)
-			let preHTML = await ConvertToHtml(text);
-			let html = await ConvertImageRoutes(preHTML);
-
-			// If the `build_html` environment variable is true, build the HTML
-			if (build_html == true) {
-				await BuildHTML(html, file);
-			}
-
-			// Build the PDF file
-			await BuildPDF(html, file);
-
-			// If the loop has reached the final stage, shut down the image server
-			if (file == files.slice(-1)[0]) {
-				server.close(function () { console.log('Gracefully shut down image server.'); });
-			}
-		}
-	});
-}
-
-// Start the convert process
-Start();
+exports = module.exports = MarkdownToPDF;
