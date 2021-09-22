@@ -17,6 +17,7 @@
     "markdown-it-toc-done-right": "^4.2.0",
     "mustache": "4.0.1",
     "puppeteer": "1.15.0",
-    "request": "^2.88.2"
+    "request": "^2.88.2",
+    "moment": "^2.29.1"
   }
 }
