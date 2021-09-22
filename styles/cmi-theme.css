@@ -75,6 +75,10 @@ table {
     width:100%;
 }
 
+img {
+    max-width: 100%;
+}
+
 th {
     border-top: 1px solid #009fe3;
     border-bottom: 1px solid #009fe3;
