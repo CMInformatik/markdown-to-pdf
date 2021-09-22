@@ -32,7 +32,7 @@ function booleanTransformer(bool) {
 
 
 // GitHub Action inputs that are needed for this program to run
-const InputDir = getRunnerInput('input_dir', '', getRunnerPath);
+const InputDir = getRunnerInput('input_dir', '', getRunnerPath) + '/';
 const ImageImport = getRunnerInput('image_import', null);
 const ImageDir = getRunnerInput('images_dir', InputDir + '/' + md2pdf.nullCoalescing(ImageImport, ''), getRunnerPath);
 
