@@ -8,8 +8,9 @@ const hljs = require('highlight.js');
 const express = require('express');
 const mustache = require('mustache');
 const puppeteer = require('puppeteer');
-const markdownIt = require('markdown-it');
-const { response } = require('express');
+const MarkdownIt = require('markdown-it');
+const MarkdownItAnchor = require('markdown-it-anchor');
+const markdownItTOC = require('markdown-it-toc-done-right');
 const moment = require('moment');
 
 // Encoding is "null" so we can get the image correctly
@@ -63,24 +64,36 @@ function GetMarkdownFiles(files) {
 
 // GetMarkdownIt returns the instance of markdown-it with the correct settings
 function GetMarkdownIt() {
-	let md = new markdownIt({
+	let md = new MarkdownIt({
 		html: true,
 		breaks: true,
 		xhtmlOut: true,
 		// Handle code snippet highlighting, we can catch this error as it will
 		// be correctly handled by markdown-it
-		highlight: function (str, lang) {
-			if (lang && hljs.getLanguage(lang)) {
+		highlight: function(str, lang) {
+			if(lang && hljs.getLanguage(lang)) {
 				try {
-					return hljs.highlight(lang, str).value;
-				} catch (__) { }
+					return hljs.highlight(str, {language: lang}).value;
+				}catch(__) {
+				}
 			}
+
 			return ''; // use external default escaping
 		}
-	})
-	// Import headers to ensure that the IDs are escaped
-	md.use(require('markdown-it-named-headers'), {
-		slugify: Slug
+	});
+
+	md.use(MarkdownItAnchor, {
+		permalink: MarkdownItAnchor.permalink.ariaHidden({
+			class: 'anchor',
+			symbol: '<span class="octicon octicon-link"></span>',
+			placement: 'before',
+		}),
+		slugify: slugify,
+	});
+	md.use(markdownItTOC, {
+		containerId: 'table-of-contents',
+		listType: 'ul',
+		slugify: slugify,
 	});
 
 	return md;
