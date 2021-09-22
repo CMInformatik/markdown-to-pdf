@@ -98,6 +98,27 @@ function GetMarkdownIt() {
 
 	return md;
 }
+
+const used_headers = {};
+
+// 'slugify' is a helper function to escape characters in the titles URL
+function slugify(string) {
+	let slug = encodeURIComponent(string.trim()
+		.toLowerCase()
+		.replace(/[\]\[!"#$%&'()*+,.\/:;<=>?@\\^_{|}~`]/g, '')
+		.replace(/\s+/g, '-')
+		.replace(/^-+/, '')
+		.replace(/-+$/, ''));
+
+	if(used_headers[slug]) {
+		slug += '-' + ++used_headers[slug];
+	}else {
+		used_headers[slug] = 0;
+	}
+
+	return slug;
+}
+
 // UpdateFileName is a helper function to replace the extension
 function UpdateFileName(fileName, extension) {
 	var fileName = fileName.split('.');
