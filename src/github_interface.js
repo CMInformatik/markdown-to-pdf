@@ -37,7 +37,7 @@ const ImageImport = getRunnerInput('image_import', null);
 const ImageDir = getRunnerInput('images_dir', InputDir + '/' + md2pdf.nullCoalescing(ImageImport, ''), getRunnerPath);
 
 // Optional input, though recommended
-const OutputDir = getRunnerInput('output_dir', 'built', getRunnerPath);
+const OutputDir = getRunnerInput('output_dir', 'built', getRunnerPath) + '/';
 
 // Whether to also output a <filename>.html file, there is a bit of magic at the end to ensure that the value is a boolean
 const build_html = getRunnerInput('build_html', true, booleanTransformer);
